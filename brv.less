@@ -1,0 +1,55 @@
+
+#brv-toc {
+  all: revert;
+  aside, h1, menu, li, a {
+    all: revert
+  }
+
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  background: rgba(255, 255, 255, .3);
+
+  aside {
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 90%;
+    max-width: 80ch;
+    height: 80%;
+    overflow-y: scroll;
+
+    background: rgba(255, 255, 255, .9);
+    border-radius: 5px;
+
+    text-align: left;
+
+    h1 {
+      padding-right: 2ch;
+      font-size: 0.9rem;
+      text-align: right;
+    }
+
+    menu {
+      font-size: 1rem;
+
+      a {
+        text-decoration: none;
+        color: navy;
+        padding: 0 .1rem;
+        border-radius: .4rem;
+
+        &:hover {
+          background: aliceblue;
+        }
+      }
+    }
+
+  }
+}

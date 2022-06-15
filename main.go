@@ -148,10 +148,6 @@ func makeTocHtml(ncx epub.Item) string {
 	}
 }
 
-func wrapToc(inner string) string {
-	return `<div id="` + TocID + `" style="display:none">` + inner + "</div>\n"
-}
-
 func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -196,9 +192,12 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 			case html.EndTagToken:
 				if token.DataAtom == atom.Body {
 					// insert toc node
-					_, err = w.Write([]byte(wrapToc(toc)))
+					_, err = w.Write([]byte(`<div id="` + TocID + `" style="display:none"><aside>` + toc + "</aside></div>\n"))
 					// insert script
-					_, err = w.Write([]byte("<script>" + script + "</script>"))
+					_, err = w.Write([]byte("<script>" + script + "</script>\n"))
+				} else if token.DataAtom == atom.Head {
+					// insert style
+					_, err = w.Write([]byte("<style>" + style + "</style>\n"))
 				}
 				fallthrough
 			default:
@@ -221,3 +220,6 @@ func dumpItem(item epub.Item) string {
 
 //go:embed brv.js
 var script string
+
+//go:embed brv.css
+var style string
