@@ -39,14 +39,21 @@
     menu {
       font-size: 1rem;
 
-      a {
-        text-decoration: none;
-        color: navy;
-        padding: 0 .1rem;
-        border-radius: .4rem;
+      li {
 
-        &:hover {
-          background: aliceblue;
+        &.current {
+          background: linear-gradient(to left, aliceblue, white);
+        }
+
+        a {
+          text-decoration: none;
+          color: navy;
+          padding: 0 .1rem;
+          border-radius: .4rem;
+
+          &:hover {
+            background: aliceblue;
+          }
         }
       }
     }
