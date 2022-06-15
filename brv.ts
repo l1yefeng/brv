@@ -7,8 +7,19 @@ interface TocPoint {
 const TOC_ID = "brv-toc"
 const tocDiv = document.getElementById(TOC_ID)
 
+// setup
+
 let tocOn = false
 let tocPoints = makeTocPoints()
+
+// set click handlers of some toc anchors
+tocPoints.forEach(({anchor}) => {
+    anchor.addEventListener("click", () => {
+        // hide toc
+        tocDiv.style.display = "none"
+        tocOn = false
+    })
+})
 
 // respond to keys
 document.addEventListener("keydown", keyListener)
@@ -24,6 +35,8 @@ if (tocPoints.length > 0) {
         document.addEventListener("scroll", throttle(scrollListener, 100))
     }
 }
+
+// functions
 
 function keyListener(event: KeyboardEvent) {
     switch (event.code) {
