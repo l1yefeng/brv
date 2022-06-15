@@ -202,7 +202,7 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 				}
 				fallthrough
 			default:
-				_, err = w.Write(tokenizer.Raw())
+				_, err = w.Write([]byte(token.String()))
 			}
 
 			if err == io.EOF {
