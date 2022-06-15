@@ -66,7 +66,11 @@ func main() {
 
 func makeTocHtml(ncx epub.Item) string {
 	file, err := ncx.Open()
-	defer file.Close()
+	defer func() {
+		if err = file.Close(); err != nil {
+			log.Printf("when closing '%s', %v", dumpItem(ncx), err)
+		}
+	}()
 
 	if err != nil {
 		log.Printf("when opening item '%s', %v", dumpItem(ncx), err)
@@ -152,7 +156,11 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		file, err := item.Open()
-		defer file.Close()
+		defer func() {
+			if err = file.Close(); err != nil {
+				log.Printf("when closing '%s', %v", dumpItem(item), err)
+			}
+		}()
 
 		if err != nil {
 			log.Printf("when opening item '%s', %v", dumpItem(item), err)
