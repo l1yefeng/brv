@@ -202,10 +202,10 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 					// insert toc node
 					_, err = w.Write([]byte(`<div id="` + TocID + `" style="display:none"><aside>` + toc + "</aside></div>\n"))
 					// insert script
-					_, err = w.Write([]byte("<script>" + script + "</script>\n"))
+					_, err = w.Write([]byte("<script>" + html.EscapeString(script) + "</script>\n"))
 				} else if token.DataAtom == atom.Head {
 					// insert style
-					_, err = w.Write([]byte("<style>" + style + "</style>\n"))
+					_, err = w.Write([]byte("<style>" + html.EscapeString(style) + "</style>\n"))
 				}
 				fallthrough
 			default:
