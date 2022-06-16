@@ -8,15 +8,9 @@ const boxElem = document.getElementById("brv-box")
 const tocElem = document.getElementById("brv-toc")
 const ciElem = document.getElementById("brv-ci")
 
-enum AppBoxState {
-    None,
-    Toc,
-    ConfigInfo,
-}
-
 // setup
 
-let appBoxState = AppBoxState.None
+let appBoxState = 0
 let tocPoints = makeTocPoints()
 
 // set click handlers of some toc anchors
@@ -24,12 +18,12 @@ tocPoints.forEach(({anchor}) => {
     anchor.addEventListener("click", () => {
         // hide toc
         boxElem.style.display = "none"
-        appBoxState = AppBoxState.None
+        appBoxState = 0
     })
 })
 
 // respond to keys
-document.body.addEventListener("keydown", keyListener)
+document.body.addEventListener("keydown", handleKeyDown)
 
 // initial highlight current point in toc
 // respond to scrolling
@@ -39,13 +33,16 @@ if (tocPoints.length > 0) {
     } else {
         const selected = findCurrentTocPoint()
         highlightToc(selected)
-        document.addEventListener("scroll", throttle(scrollListener, 100))
+        document.addEventListener("scroll", throttle(handleScroll, 150))
     }
 }
 
+// respond to resize
+window.addEventListener("resize", throttle(handleResize, 150))
+
 // functions
 
-function keyListener(event: KeyboardEvent) {
+function handleKeyDown(event: KeyboardEvent) {
     if (event.target instanceof Element &&
         event.target.tagName.toLowerCase() == "input") {
         return
@@ -56,9 +53,9 @@ function keyListener(event: KeyboardEvent) {
         case "Escape":
 
             event.preventDefault()
-            if (appBoxState != AppBoxState.None) {
+            if (appBoxState > 0) {
                 boxElem.style.display = "none"
-                appBoxState = AppBoxState.None
+                appBoxState = 0
             }
             break
 
@@ -80,7 +77,7 @@ function keyListener(event: KeyboardEvent) {
     }
 }
 
-function scrollListener() {
+function handleScroll() {
 
     // highlight
     const selected = findCurrentTocPoint()
@@ -99,6 +96,15 @@ function scrollListener() {
         }
     }
 
+}
+
+function handleResize() {
+
+    // re-calculate toc target positions
+    tocPoints = makeTocPoints()
+
+    // re-highlight
+    handleScroll()
 }
 
 function findCurrentTocPoint(): HTMLAnchorElement {
