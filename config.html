@@ -3,22 +3,27 @@
     <form method="post">
         <ul>
             <li>
-                <label for="brv-padding">Page paddings</label>
-                <input type="number" name="padding" id="brv-padding" value="20" max="45" min="0"/>
+                <label for="brv-left-margin">Page left margin</label>
+                <input type="number" name="padding-left" id="brv-left-margin" value="20" placeholder="unset" max="45" min="0"/>
+                %
+            </li>
+            <li>
+                <label for="brv-right-margin">Page right margin</label>
+                <input type="number" name="padding-right" id="brv-right-margin" value="20" placeholder="unset" max="45" min="0"/>
                 %
             </li>
             <li>
                 <label for="brv-font-family">Font family</label>
-                <input type="text" name="font-family" id="brv-font-family" placeholder="clear to unset"/>
+                <input type="text" name="font-family" id="brv-font-family" value="" placeholder="unset"/>
             </li>
             <li>
                 <label for="brv-font-size">Font size (scale)</label>
-                <input type="number" name="font-size" id="brv-font-size" value="100" min="1"/>
+                <input type="number" name="font-size" id="brv-font-size" value="100" placeholder="unset" min="1"/>
                 %
             </li>
             <li>
                 <label for="brv-line-height">Line height</label>
-                <input type="number" name="brv-line-height" id="brv-line-height" value="1.2" step="0.1" min="0.1" />
+                <input type="number" name="line-height" id="brv-line-height" value="1.2" placeholder="unset" step="0.1" min="0.1" />
             </li>
         </ul>
         <menu>

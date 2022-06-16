@@ -4,11 +4,28 @@ interface TocPoint {
     pos: number;
 }
 
-const boxElem = document.getElementById("brv-box")
-const tocElem = document.getElementById("brv-toc")
-const ciElem = document.getElementById("brv-ci")
+interface CustomiseOpt {
+    input: HTMLInputElement;
+    cssKey: string;
+    originalValue: string;
+    setter: (value: string) => string;
+}
 
+const boxElem = document.getElementById("brv-box")!
+const tocElem = document.getElementById("brv-toc")!
+const ciElem = document.getElementById("brv-ci")!
+
+const customiseOpts: CustomiseOpt[] = [
+    initCustomiseOpt("brv-left-margin", v => v+"%"),
+    initCustomiseOpt("brv-right-margin", v => v+"%"),
+    initCustomiseOpt("brv-font-family", v => v),
+    initCustomiseOpt("brv-font-size", v => v+"%"),
+    initCustomiseOpt("brv-line-height", v => v),
+]
+
+//
 // setup
+//
 
 let appBoxState = 0
 let tocPoints = makeTocPoints()
@@ -16,9 +33,7 @@ let tocPoints = makeTocPoints()
 // set click handlers of some toc anchors
 tocPoints.forEach(({anchor}) => {
     anchor.addEventListener("click", () => {
-        // hide toc
-        boxElem.style.display = "none"
-        appBoxState = 0
+        hideAppBox()
     })
 })
 
@@ -31,16 +46,20 @@ if (tocPoints.length > 0) {
     if (tocPoints.length == 1) {
         highlightToc(tocPoints[0].anchor)
     } else {
-        const selected = findCurrentTocPoint()
-        highlightToc(selected)
-        document.addEventListener("scroll", throttle(handleScroll, 150))
+        highlightToc(findCurrentTocPoint())
+        document.addEventListener("scroll", throttle(onPageShift, 150))
     }
 }
 
 // respond to resize
-window.addEventListener("resize", throttle(handleResize, 150))
+window.addEventListener("resize", throttle(onPageReformat, 150))
 
+// config setup
+config()
+
+//
 // functions
+//
 
 function handleKeyDown(event: KeyboardEvent) {
     if (event.target instanceof Element &&
@@ -54,8 +73,7 @@ function handleKeyDown(event: KeyboardEvent) {
 
             event.preventDefault()
             if (appBoxState > 0) {
-                boxElem.style.display = "none"
-                appBoxState = 0
+                hideAppBox()
             }
             break
 
@@ -64,7 +82,7 @@ function handleKeyDown(event: KeyboardEvent) {
             event.preventDefault()
 
             const displayValues = [
-                ["none", undefined, undefined],
+                ["none", "", ""],
                 ["block", "block", "none"],
                 ["block", "none", "block"],
             ]
@@ -77,7 +95,12 @@ function handleKeyDown(event: KeyboardEvent) {
     }
 }
 
-function handleScroll() {
+function hideAppBox() {
+    boxElem.style.display = "none"
+    appBoxState = 0
+}
+
+function onPageShift() {
 
     // highlight
     const selected = findCurrentTocPoint()
@@ -98,13 +121,13 @@ function handleScroll() {
 
 }
 
-function handleResize() {
+function onPageReformat() {
 
     // re-calculate toc target positions
     tocPoints = makeTocPoints()
 
     // re-highlight
-    handleScroll()
+    onPageShift()
 }
 
 function findCurrentTocPoint(): HTMLAnchorElement {
@@ -126,15 +149,15 @@ function findCurrentTocPoint(): HTMLAnchorElement {
 function highlightToc(a: HTMLAnchorElement) {
     const className = "current"
     tocPoints.forEach(({anchor}) => {
-        anchor.parentElement.classList.remove(className)
+        anchor.parentElement!.classList.remove(className)
     })
-    a.parentElement.classList.add(className)
+    a.parentElement!.classList.add(className)
 }
 
 // calculate the position of each toc target on the current page
 function makeTocPoints(): TocPoint[] {
     const pageHref = window.location.pathname
-    const anchors = tocElem.querySelectorAll(`a[href^="${pageHref}"]`)
+    const anchors = tocElem.querySelectorAll<HTMLAnchorElement>(`a[href^="${pageHref}"]`)
 
     let points: TocPoint[] = []
     anchors.forEach((elem: HTMLAnchorElement) => {
@@ -154,6 +177,40 @@ function makeTocPoints(): TocPoint[] {
     })
 
     return points
+}
+
+function applyConfig() {
+    customiseOpts.forEach(({input, cssKey, originalValue, setter}) => {
+        // clean
+        let inValue = input.value.trim()
+        if (input.type == "number") {
+            const num: number = +inValue
+            inValue = num.toString()
+        }
+        input.value = inValue
+        // apply
+        document.body.style[cssKey] = inValue ? setter(inValue) : originalValue
+    })
+
+    onPageReformat()
+}
+
+function config() {
+    applyConfig()
+
+    // buttons respond to click
+    document.getElementById("brv-apply-config")!.addEventListener("click", applyConfig)
+    document.getElementById("brv-ok-config")!.addEventListener("click", function() {
+        applyConfig()
+        hideAppBox()
+    })
+}
+
+function initCustomiseOpt(id: string, setter: (value: string) => string): CustomiseOpt {
+    const input = document.getElementById(id) as HTMLInputElement
+    const cssKey = input.name
+    const originalValue = document.body.style[cssKey]
+    return { input, cssKey, originalValue, setter }
 }
 
 function throttle(fn: () => void, wait: number): () => void {
