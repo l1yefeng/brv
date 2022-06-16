@@ -4,25 +4,32 @@ interface TocPoint {
     pos: number;
 }
 
-const TOC_ID = "brv-toc"
-const tocDiv = document.getElementById(TOC_ID)
+const boxElem = document.getElementById("brv-box")
+const tocElem = document.getElementById("brv-toc")
+const ciElem = document.getElementById("brv-ci")
+
+enum AppBoxState {
+    None,
+    Toc,
+    ConfigInfo,
+}
 
 // setup
 
-let tocOn = false
+let appBoxState = AppBoxState.None
 let tocPoints = makeTocPoints()
 
 // set click handlers of some toc anchors
 tocPoints.forEach(({anchor}) => {
     anchor.addEventListener("click", () => {
         // hide toc
-        tocDiv.style.display = "none"
-        tocOn = false
+        boxElem.style.display = "none"
+        appBoxState = AppBoxState.None
     })
 })
 
 // respond to keys
-document.addEventListener("keydown", keyListener)
+document.body.addEventListener("keydown", keyListener)
 
 // initial highlight current point in toc
 // respond to scrolling
@@ -39,14 +46,18 @@ if (tocPoints.length > 0) {
 // functions
 
 function keyListener(event: KeyboardEvent) {
+    if (event.target instanceof Element && event.target.tagName.toLowerCase() == "input") {
+        return
+    }
+
     switch (event.code) {
 
         case "Escape":
 
             event.preventDefault()
-            if (tocOn) {
-                tocDiv.style.display = "none"
-                tocOn = false
+            if (appBoxState != AppBoxState.None) {
+                boxElem.style.display = "none"
+                appBoxState = AppBoxState.None
             }
             break
 
@@ -54,8 +65,19 @@ function keyListener(event: KeyboardEvent) {
 
             event.preventDefault()
 
-            tocDiv.style.display = tocOn ? "none" : "block"
-            tocOn = !tocOn
+            if (appBoxState == AppBoxState.None) {
+                boxElem.style.display = "block"
+                tocElem.style.display = "block"
+                ciElem.style.display = "none"
+                appBoxState = AppBoxState.Toc
+            } else if (appBoxState == AppBoxState.Toc) {
+                tocElem.style.display = "none"
+                ciElem.style.display = "block"
+                appBoxState = AppBoxState.ConfigInfo
+            } else {
+                boxElem.style.display = "none"
+                appBoxState = AppBoxState.None
+            }
 
             break
     }
@@ -109,7 +131,7 @@ function highlightToc(a: HTMLAnchorElement) {
 // calculate the position of each toc target on the current page
 function makeTocPoints(): TocPoint[] {
     const pageHref = window.location.pathname
-    const anchors = tocDiv.querySelectorAll(`a[href^="${pageHref}"]`)
+    const anchors = tocElem.querySelectorAll(`a[href^="${pageHref}"]`)
 
     let points: TocPoint[] = []
     anchors.forEach((elem: HTMLAnchorElement) => {

@@ -1,0 +1,29 @@
+<section id="brv-config">
+    <h2>Customisations</h2>
+    <form method="post">
+        <ul>
+            <li>
+                <label for="brv-padding">Page paddings</label>
+                <input type="number" name="padding" id="brv-padding" value="20" max="45" min="0"/>
+                %
+            </li>
+            <li>
+                <label for="brv-font-family">Font family</label>
+                <input type="text" name="font-family" id="brv-font-family" placeholder="clear to unset"/>
+            </li>
+            <li>
+                <label for="brv-font-size">Font size (scale)</label>
+                <input type="number" name="font-size" id="brv-font-size" value="100" min="1"/>
+                %
+            </li>
+            <li>
+                <label for="brv-line-height">Line height</label>
+                <input type="number" name="brv-line-height" id="brv-line-height" value="1.2" step="0.1" min="0.1" />
+            </li>
+        </ul>
+        <menu>
+            <li><input type="button" value="APPLY" id="brv-apply-config"/></li>
+            <li><input type="button" value="OK" id="brv-ok-config"/></li>
+        </menu>
+    </form>
+</section>

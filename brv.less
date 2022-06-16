@@ -1,9 +1,6 @@
 
-#brv-toc {
+#brv-box {
   all: revert;
-  aside, h1, menu, li, a {
-    all: revert
-  }
 
   width: 100vw;
   height: 100vh;
@@ -14,7 +11,6 @@
   background: rgba(255, 255, 255, .3);
 
   aside {
-
     position: fixed;
     top: 50%;
     left: 50%;
@@ -27,36 +23,82 @@
 
     background: rgba(255, 255, 255, .9);
     border-radius: 5px;
+  }
+}
 
-    text-align: left;
+aside#brv-toc {
 
-    h1 {
-      padding-right: 2ch;
-      font-size: 0.9rem;
-      text-align: right;
-    }
+  h1 {
+    padding-right: 2ch;
+    font-size: 0.9rem;
+    text-align: right;
+  }
 
-    menu {
-      font-size: 1rem;
+  menu {
+    font-size: 1rem;
 
-      li {
+    li {
 
-        &.current {
-          background: linear-gradient(to left, aliceblue, white);
-        }
+      &.current {
+        background: linear-gradient(to left, aliceblue, white);
+      }
 
-        a {
-          text-decoration: none;
-          color: navy;
-          padding: 0 .1rem;
-          border-radius: .4rem;
+      a {
+        text-decoration: none;
+        color: navy;
+        padding: 0 .1rem;
+        border-radius: .4rem;
 
-          &:hover {
-            background: aliceblue;
-          }
+        &:hover {
+          background: aliceblue;
         }
       }
     }
-
   }
+
+}
+
+aside#brv-ci {
+
+  font-family: monospace;
+  font-size: 1em;
+
+  input {
+    font-family: monospace;
+    font-size: 1em;
+  }
+
+  section {
+    margin: 1em;
+    padding: 1em 2em;
+
+    h2 {
+      font-size: 1.2em;
+    }
+  }
+
+  #brv-config {
+    form ul li {
+      margin-bottom: 0.5em;
+    }
+
+    menu:last-child {
+      list-style: none;
+      text-align: right;
+      li {
+        display: inline;
+        padding-right: 0.5em;
+        input {
+          padding-left: 2ch;
+          padding-right: 2ch;
+        }
+      }
+    }
+  }
+
+  th {
+    text-align: left;
+    padding-right: 1ch;
+  }
+
 }

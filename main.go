@@ -17,8 +17,6 @@ const (
 	ErrEpub
 )
 
-const TocID = "brv-toc"
-
 func main() {
 	// check cmd args
 	if len(os.Args) != 2 {
@@ -37,15 +35,15 @@ func main() {
 	book := rc.Rootfiles[0]
 
 	// build toc
-	var tocHtml string
+	var toc string
 	for _, item := range book.Manifest.Items {
 		if item.ID == "ncx" {
-			tocHtml = makeTocHtml(item)
+			toc = tocHtml(item)
 			break
 		}
 	}
 
-	if tocHtml == "" {
+	if toc == "" {
 		log.Printf("couldn't build table of content")
 	} else {
 		log.Printf("built table of content")
@@ -53,7 +51,7 @@ func main() {
 
 	// create handlers
 	for _, item := range book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, makeHandler(item, tocHtml))
+		http.HandleFunc("/"+item.HREF, makeHandler(item, toc, metadataHtml(book.Metadata)))
 	}
 
 	// identify the start page
@@ -64,7 +62,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8004", nil))
 }
 
-func makeTocHtml(ncx epub.Item) string {
+func tocHtml(ncx epub.Item) string {
 	file, err := ncx.Open()
 	defer func() {
 		if err = file.Close(); err != nil {
@@ -152,7 +150,27 @@ func makeTocHtml(ncx epub.Item) string {
 	}
 }
 
-func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *http.Request) {
+func metadataHtml(md epub.Metadata) string {
+	src := "<table>"
+
+	appendRow := func(label string, value string) {
+		if value != "" {
+			src += `<tr><th>` + label + `</th><td>` + html.EscapeString(value) + `</td></tr>`
+		}
+	}
+	appendRow("Title", md.Title)
+	appendRow("Creator", md.Creator)
+	appendRow("Contributor", md.Contributor)
+	appendRow("Publisher", md.Publisher)
+	appendRow("Language", md.Language)
+	appendRow("Identifier", md.Identifier)
+	appendRow("Description", md.Description)
+
+	src += "</table>"
+	return src
+}
+
+func makeHandler(item epub.Item, toc string, metadata string) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		file, err := item.Open()
@@ -199,8 +217,8 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 				err = tokenizer.Err()
 			case html.EndTagToken:
 				if token.DataAtom == atom.Body {
-					// insert toc node
-					_, err = w.Write([]byte(`<div id="` + TocID + `" style="display:none"><aside>` + toc + "</aside></div>\n"))
+					// insert box html
+					_, err = w.Write([]byte(appBoxHtml(toc, metadata)))
 					// insert script
 					_, err = w.Write([]byte("<script>" + html.EscapeString(script) + "</script>\n"))
 				} else if token.DataAtom == atom.Head {
@@ -222,6 +240,22 @@ func makeHandler(item epub.Item, toc string) func(w http.ResponseWriter, req *ht
 	}
 }
 
+const BoxID = "brv-box"
+const ConfigInfoID = "brv-ci"
+const InfoID = "brv-info"
+const TocID = "brv-toc"
+
+// const ConfigID = "brv-config"
+
+func appBoxHtml(toc string, metadata string) string {
+	src := `<div id="` + BoxID + `" style="display:none">`
+	src += `<aside id="` + TocID + `">` + toc + "</aside>"
+	infoFrag := `<section id="` + InfoID + `"><h2>Book information</h2>` + metadata + "</section>"
+	src += `<aside id="` + ConfigInfoID + `">` + configFrag + infoFrag + aboutFrag + "</aside>"
+	src += "</div>"
+	return src
+}
+
 func dumpItem(item epub.Item) string {
 	return item.ID + " <" + item.HREF + ">"
 }
@@ -231,3 +265,9 @@ var script string
 
 //go:embed brv.css
 var style string
+
+//go:embed config.html
+var configFrag string
+
+//go:embed about.html
+var aboutFrag string
