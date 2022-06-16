@@ -46,7 +46,8 @@ if (tocPoints.length > 0) {
 // functions
 
 function keyListener(event: KeyboardEvent) {
-    if (event.target instanceof Element && event.target.tagName.toLowerCase() == "input") {
+    if (event.target instanceof Element &&
+        event.target.tagName.toLowerCase() == "input") {
         return
     }
 
@@ -65,19 +66,15 @@ function keyListener(event: KeyboardEvent) {
 
             event.preventDefault()
 
-            if (appBoxState == AppBoxState.None) {
-                boxElem.style.display = "block"
-                tocElem.style.display = "block"
-                ciElem.style.display = "none"
-                appBoxState = AppBoxState.Toc
-            } else if (appBoxState == AppBoxState.Toc) {
-                tocElem.style.display = "none"
-                ciElem.style.display = "block"
-                appBoxState = AppBoxState.ConfigInfo
-            } else {
-                boxElem.style.display = "none"
-                appBoxState = AppBoxState.None
-            }
+            const displayValues = [
+                ["none", undefined, undefined],
+                ["block", "block", "none"],
+                ["block", "none", "block"],
+            ]
+
+            appBoxState += event.shiftKey ? 2 : 1
+            appBoxState %= 3;
+            [boxElem.style.display, tocElem.style.display, ciElem.style.display] = displayValues[appBoxState]
 
             break
     }
