@@ -1,15 +1,20 @@
 package main
 
 import (
+	"crypto/md5"
 	_ "embed"
-	"github.com/taylorskalyo/goreader/epub"
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/taylorskalyo/goreader/epub"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 const (
@@ -49,9 +54,17 @@ func main() {
 		log.Printf("built table of content")
 	}
 
-	// create handlers
+	var lastRead string
+	if bookRLPath := readLaterPath(bookPath); bookRLPath != "" {
+		lastRead = lastReadJS(bookRLPath)
+		http.HandleFunc("/save_brv", saveHandler(bookRLPath))
+	} else {
+		lastRead = emptyLastRead
+	}
+
+	// create book file request handlers
 	for _, item := range book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, makeHandler(item, toc, metadataHtml(book.Metadata)))
+		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, metadataHtml(book.Metadata), lastRead))
 	}
 
 	// identify the start page
@@ -60,6 +73,40 @@ func main() {
 
 	// start server on 8004
 	log.Fatal(http.ListenAndServe(":8004", nil))
+}
+
+func readLaterPath(bookPath string) string {
+
+	// calculate path
+	userConfigPath, err := os.UserConfigDir()
+	if err != nil {
+		log.Printf("when identifying user config dir, %v", err)
+		return ""
+	}
+	hash, err := fileHash(bookPath)
+	if err != nil {
+		log.Printf("when computing book file MD5 hash, %v", err)
+		return ""
+	}
+
+	dir := filepath.Join(userConfigPath, "brv", "read_later")
+	os.MkdirAll(dir, 0755)
+
+	return filepath.Join(dir, fmt.Sprintf("%x", hash))
+}
+
+func lastReadJS(path string) string {
+
+	// open rl file
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Printf("when reading read-later file '%s', %v", path, err)
+		}
+		return emptyLastRead
+	}
+
+	return "const lastRead = " + string(raw) + ";"
 }
 
 func tocHtml(ncx epub.Item) string {
@@ -170,7 +217,22 @@ func metadataHtml(md epub.Metadata) string {
 	return src
 }
 
-func makeHandler(item epub.Item, toc string, metadata string) func(w http.ResponseWriter, req *http.Request) {
+func saveHandler(savePath string) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			log.Printf("when reading request body, %v", err)
+			return
+		}
+
+		// write body to savePath
+		if err := os.WriteFile(savePath, body, 0755); err != nil {
+			log.Printf("when saving last read status to '%s', %v", savePath, err)
+		}
+	}
+}
+
+func bookItemHandler(item epub.Item, toc string, metadata string, lastRead string) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		file, err := item.Open()
@@ -220,7 +282,7 @@ func makeHandler(item epub.Item, toc string, metadata string) func(w http.Respon
 					// insert box html
 					_, err = w.Write([]byte(appBoxHtml(toc, metadata)))
 					// insert script
-					_, err = w.Write([]byte("<script>" + html.EscapeString(script) + "</script>\n"))
+					_, err = w.Write([]byte("<script>" + html.EscapeString(lastRead+script) + "</script>\n"))
 				} else if token.DataAtom == atom.Head {
 					// insert style
 					_, err = w.Write([]byte("<style>" + html.EscapeString(style) + "</style>\n"))
@@ -245,8 +307,6 @@ const ConfigInfoID = "brv-ci"
 const InfoID = "brv-info"
 const TocID = "brv-toc"
 
-// const ConfigID = "brv-config"
-
 func appBoxHtml(toc string, metadata string) string {
 	src := `<div id="` + BoxID + `" style="display:none">`
 	src += `<aside id="` + TocID + `">` + toc + "</aside>"
@@ -256,9 +316,26 @@ func appBoxHtml(toc string, metadata string) string {
 	return src
 }
 
+func fileHash(path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return nil, err
+	}
+
+	return hash.Sum(nil), nil
+}
+
 func dumpItem(item epub.Item) string {
 	return item.ID + " <" + item.HREF + ">"
 }
+
+const emptyLastRead = "const lastRead = null;"
 
 //go:embed brv.js
 var script string

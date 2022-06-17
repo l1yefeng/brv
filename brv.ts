@@ -1,4 +1,6 @@
 
+declare const lastRead: {}
+
 interface TocPoint {
     anchor: HTMLAnchorElement;
     pos: number;
@@ -119,6 +121,9 @@ function onPageShift() {
         }
     }
 
+    // save last read
+    saveLastRead()
+
 }
 
 function onPageReformat() {
@@ -196,13 +201,26 @@ function applyConfig() {
 }
 
 function config() {
+
+    // use last read if any
+    if (lastRead) {
+        customiseOpts.forEach(({input, cssKey}) => {
+            input.value = lastRead[cssKey]
+        })
+    }
+
+    // apply to page
     applyConfig()
 
-    // buttons respond to click
-    document.getElementById("brv-apply-config")!.addEventListener("click", applyConfig)
+    // setup buttons respond to click
+    document.getElementById("brv-apply-config")!.addEventListener("click", function() {
+        applyConfig()
+        saveLastRead()
+    })
     document.getElementById("brv-ok-config")!.addEventListener("click", function() {
         applyConfig()
         hideAppBox()
+        saveLastRead()
     })
 }
 
@@ -211,6 +229,28 @@ function initCustomiseOpt(id: string, setter: (value: string) => string): Custom
     const cssKey = input.name
     const originalValue = document.body.style[cssKey]
     return { input, cssKey, originalValue, setter }
+}
+
+function saveLastRead() {
+
+    let lastRead = {
+        position: readingPosition(),
+    }
+    customiseOpts.forEach(({input, cssKey}) => {
+        lastRead[cssKey] = input.value
+    })
+
+    // send to server
+    fetch("/save_brv", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(lastRead),
+    })
+}
+
+function readingPosition(): number {
+    // TODO
+    return 0
 }
 
 function throttle(fn: () => void, wait: number): () => void {
