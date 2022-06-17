@@ -5,40 +5,48 @@
     all: revert;
   }
 
+  // app box covers the whole viewport
   width: 100vw;
   height: 100vh;
   position: fixed;
   top: 0;
   left: 0;
 
+  // color
   background: rgba(255, 255, 255, .3);
 
   aside {
+    // a "modal" in the center
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
 
     width: 90%;
-    max-width: 80ch;
+    max-width: 40em;
     height: 80%;
     overflow-y: scroll;
 
+    // style
     background: rgba(255, 255, 255, .9);
     border-radius: 5px;
+
+    // font size: relative to <html> and not scale with book font size
+    font-size: 1rem;
+    line-height: 1.1;
   }
 }
 
 aside#brv-toc {
 
   h1 {
-    padding-right: 2ch;
-    font-size: 0.9rem;
+    padding-right: 2em;
+    font-size: 0.9em;
     text-align: right;
   }
 
   menu {
-    font-size: 1rem;
+    font-size: 1.05em;
 
     li {
 
@@ -49,8 +57,8 @@ aside#brv-toc {
       a {
         text-decoration: none;
         color: navy;
-        padding: 0 .1rem;
-        border-radius: .4rem;
+        padding: 0 .1em;
+        border-radius: .4em;
 
         &:hover {
           background: aliceblue;
@@ -63,12 +71,8 @@ aside#brv-toc {
 
 aside#brv-ci {
 
-  font-family: monospace;
-  font-size: 1em;
-
-  input {
+  &, input {
     font-family: monospace;
-    font-size: 1em;
   }
 
   section {
@@ -92,8 +96,8 @@ aside#brv-ci {
         display: inline;
         padding-right: 0.5em;
         input {
-          padding-left: 2ch;
-          padding-right: 2ch;
+          padding-left: 1em;
+          padding-right: 1em;
         }
       }
     }
@@ -101,7 +105,8 @@ aside#brv-ci {
 
   th {
     text-align: left;
-    padding-right: 1ch;
+    padding-right: 0.5em;
+    vertical-align: top;
   }
 
 }
