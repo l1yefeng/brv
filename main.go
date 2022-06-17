@@ -210,8 +210,15 @@ func metadataHtml(md epub.Metadata) string {
 	appendRow("Contributor", md.Contributor)
 	appendRow("Publisher", md.Publisher)
 	appendRow("Language", md.Language)
-	appendRow("Identifier", md.Identifier)
 	appendRow("Description", md.Description)
+	appendRow("Subject", md.Subject)
+	appendRow("Identifier", md.Identifier)
+	appendRow("Format", md.Format)
+	appendRow("Type", md.Type)
+	appendRow("Coverage", md.Coverage)
+	appendRow("Relations", md.Relation)
+	appendRow("Rights", md.Rights)
+	appendRow("Source", md.Source)
 
 	src += "</table>"
 	return src
@@ -252,7 +259,7 @@ func bookItemHandler(item epub.Item, toc string, metadata string, lastRead strin
 		// respond immediately unless is document
 		if !strings.Contains(item.MediaType, "html") {
 			buf := make([]byte, 1024)
-			for {
+			for {>
 				n, err := file.Read(buf)
 				if err != nil && err != io.EOF {
 					log.Printf("when reading item '%s', %v", dumpItem(item), err)
