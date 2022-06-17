@@ -55,7 +55,8 @@ func main() {
 	}
 
 	var lastRead string
-	if bookRLPath := readLaterPath(bookPath); bookRLPath != "" {
+	bookRLPath := readLaterPath(bookPath)
+	if bookRLPath != "" {
 		lastRead = lastReadJS(bookRLPath)
 		http.HandleFunc("/save_brv", saveHandler(bookRLPath))
 	} else {
@@ -63,8 +64,9 @@ func main() {
 	}
 
 	// create book file request handlers
+	info := infoHtml(book.Metadata, bookPath, bookRLPath)
 	for _, item := range book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, metadataHtml(book.Metadata), lastRead))
+		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, info, lastRead))
 	}
 
 	// identify the start page
@@ -197,14 +199,15 @@ func tocHtml(ncx epub.Item) string {
 	}
 }
 
-func metadataHtml(md epub.Metadata) string {
-	src := "<table>"
+func infoHtml(md epub.Metadata, bookPath string, readLaterPath string) string {
+	var src string
 
 	appendRow := func(label string, value string) {
 		if value != "" {
 			src += `<tr><th>` + label + `</th><td>` + html.EscapeString(value) + `</td></tr>`
 		}
 	}
+
 	appendRow("Title", md.Title)
 	appendRow("Creator", md.Creator)
 	appendRow("Contributor", md.Contributor)
@@ -220,7 +223,9 @@ func metadataHtml(md epub.Metadata) string {
 	appendRow("Rights", md.Rights)
 	appendRow("Source", md.Source)
 
-	src += "</table>"
+	appendRow("Location", bookPath)
+	appendRow("Read later", readLaterPath)
+
 	return src
 }
 
@@ -287,7 +292,7 @@ func bookItemHandler(item epub.Item, toc string, metadata string, lastRead strin
 			case html.EndTagToken:
 				if token.DataAtom == atom.Body {
 					// insert box html
-					_, err = w.Write([]byte(appBoxHtml(toc, metadata)))
+					_, err = w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, toc, configFrag, metadata)))
 					// insert script
 					_, err = w.Write([]byte("<script>" + html.EscapeString(lastRead+script) + "</script>\n"))
 				} else if token.DataAtom == atom.Head {
@@ -313,15 +318,6 @@ const BoxID = "brv-box"
 const ConfigInfoID = "brv-ci"
 const InfoID = "brv-info"
 const TocID = "brv-toc"
-
-func appBoxHtml(toc string, metadata string) string {
-	src := `<div id="` + BoxID + `" style="display:none">`
-	src += `<aside id="` + TocID + `">` + toc + "</aside>"
-	infoFrag := `<section id="` + InfoID + `"><h2>Book information</h2>` + metadata + "</section>"
-	src += `<aside id="` + ConfigInfoID + `">` + configFrag + infoFrag + aboutFrag + "</aside>"
-	src += "</div>"
-	return src
-}
 
 func fileHash(path string) ([]byte, error) {
 	file, err := os.Open(path)
@@ -353,5 +349,5 @@ var style string
 //go:embed config.html
 var configFrag string
 
-//go:embed about.html
-var aboutFrag string
+//go:embed brv.html
+var appBoxHtmlFmt string
