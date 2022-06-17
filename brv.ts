@@ -234,6 +234,7 @@ function initCustomiseOpt(id: string, setter: (value: string) => string): Custom
 function saveLastRead() {
 
     let lastRead = {
+        href: window.location.pathname,
         position: readingPosition(),
     }
     customiseOpts.forEach(({input, cssKey}) => {

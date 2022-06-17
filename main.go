@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/taylorskalyo/goreader/epub"
@@ -74,9 +75,10 @@ func main() {
 		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, info))
 	}
 
+	http.HandleFunc("/", rootHandler)
+
 	// identify the start page
-	startPage := b.book.Spine.Itemrefs[0]
-	log.Printf("book ready at http://localhost:8004/%s", startPage.HREF)
+	log.Printf("book ready at http://localhost:8004/")
 
 	// start server on 8004
 	log.Fatal(http.ListenAndServe(":8004", nil))
@@ -335,6 +337,27 @@ func bookItemHandler(item epub.Item, toc string, info string) func(w http.Respon
 		serveBookPage(w, file, toc, info)
 
 	}
+}
+
+func rootHandler(w http.ResponseWriter, req *http.Request) {
+
+	var startHref string
+
+	if b.readLaterPath != "" {
+		lastRead := lastReadJS()
+
+		re := regexp.MustCompile(`"href" *: *"([^"]*)"`)
+		if matches := re.FindStringSubmatch(lastRead); len(matches) > 1 {
+			startHref = matches[1]
+		}
+	}
+
+	if startHref == "" {
+		startHref = "/" + b.book.Spine.Itemrefs[0].HREF
+	}
+
+	w.Header().Add("Location", startHref)
+	w.WriteHeader(307)
 }
 
 const BoxID = "brv-box"
