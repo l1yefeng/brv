@@ -259,7 +259,7 @@ func bookItemHandler(item epub.Item, toc string, metadata string, lastRead strin
 		// respond immediately unless is document
 		if !strings.Contains(item.MediaType, "html") {
 			buf := make([]byte, 1024)
-			for {>
+			for {
 				n, err := file.Read(buf)
 				if err != nil && err != io.EOF {
 					log.Printf("when reading item '%s', %v", dumpItem(item), err)
