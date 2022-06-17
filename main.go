@@ -22,26 +22,36 @@ const (
 	ErrEpub
 )
 
+var b struct {
+	path          string
+	readLaterPath string
+	book          *epub.Rootfile
+}
+
 func main() {
+
 	// check cmd args
 	if len(os.Args) != 2 {
 		os.Exit(ErrCmdArgs)
 	}
+	b.path = os.Args[1] // set .path
 
-	bookPath := os.Args[1]
-	rc, err := epub.OpenReader(bookPath)
+	// open book
+	rc, err := epub.OpenReader(b.path)
 	if err != nil {
 		log.Printf("when opening book, %v", err)
 		os.Exit(ErrEpub)
 	}
 	defer rc.Close()
-	log.Printf("opened book at %s", bookPath)
+	log.Printf("opened book at %s", b.path)
+	b.book = rc.Rootfiles[0] // set .book
 
-	book := rc.Rootfiles[0]
+	// read later file path
+	b.readLaterPath = readLaterPath() // set .readLaterPath, all set
 
 	// build toc
 	var toc string
-	for _, item := range book.Manifest.Items {
+	for _, item := range b.book.Manifest.Items {
 		if item.ID == "ncx" {
 			toc = tocHtml(item)
 			break
@@ -54,30 +64,25 @@ func main() {
 		log.Printf("built table of content")
 	}
 
-	var lastRead string
-	bookRLPath := readLaterPath(bookPath)
-	if bookRLPath != "" {
-		lastRead = lastReadJS(bookRLPath)
-		http.HandleFunc("/save_brv", saveHandler(bookRLPath))
-	} else {
-		lastRead = emptyLastRead
+	if b.readLaterPath != "" {
+		http.HandleFunc("/save_brv", saveHandler)
 	}
 
 	// create book file request handlers
-	info := infoHtml(book.Metadata, bookPath, bookRLPath)
-	for _, item := range book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, info, lastRead))
+	info := infoHtml()
+	for _, item := range b.book.Manifest.Items {
+		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, info))
 	}
 
 	// identify the start page
-	startPage := book.Spine.Itemrefs[0]
+	startPage := b.book.Spine.Itemrefs[0]
 	log.Printf("book ready at http://localhost:8004/%s", startPage.HREF)
 
 	// start server on 8004
 	log.Fatal(http.ListenAndServe(":8004", nil))
 }
 
-func readLaterPath(bookPath string) string {
+func readLaterPath() string {
 
 	// calculate path
 	userConfigPath, err := os.UserConfigDir()
@@ -85,7 +90,7 @@ func readLaterPath(bookPath string) string {
 		log.Printf("when identifying user config dir, %v", err)
 		return ""
 	}
-	hash, err := fileHash(bookPath)
+	hash, err := fileHash(b.path)
 	if err != nil {
 		log.Printf("when computing book file MD5 hash, %v", err)
 		return ""
@@ -97,18 +102,18 @@ func readLaterPath(bookPath string) string {
 	return filepath.Join(dir, fmt.Sprintf("%x", hash))
 }
 
-func lastReadJS(path string) string {
+func lastReadJS() string {
 
 	// open rl file
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(b.readLaterPath)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			log.Printf("when reading read-later file '%s', %v", path, err)
+			log.Printf("when reading read-later file '%s', %v", b.readLaterPath, err)
 		}
-		return emptyLastRead
+		return ""
 	}
 
-	return "const lastRead = " + string(raw) + ";"
+	return string(raw)
 }
 
 func tocHtml(ncx epub.Item) string {
@@ -199,7 +204,7 @@ func tocHtml(ncx epub.Item) string {
 	}
 }
 
-func infoHtml(md epub.Metadata, bookPath string, readLaterPath string) string {
+func infoHtml() string {
 	var src string
 
 	appendRow := func(label string, value string) {
@@ -207,6 +212,8 @@ func infoHtml(md epub.Metadata, bookPath string, readLaterPath string) string {
 			src += `<tr><th>` + label + `</th><td>` + html.EscapeString(value) + `</td></tr>`
 		}
 	}
+
+	md := &b.book.Metadata
 
 	appendRow("Title", md.Title)
 	appendRow("Creator", md.Creator)
@@ -223,28 +230,73 @@ func infoHtml(md epub.Metadata, bookPath string, readLaterPath string) string {
 	appendRow("Rights", md.Rights)
 	appendRow("Source", md.Source)
 
-	appendRow("Location", bookPath)
-	appendRow("Read later", readLaterPath)
+	appendRow("Location", b.path)
+	appendRow("Read later", b.readLaterPath)
 
 	return src
 }
 
-func saveHandler(savePath string) func(w http.ResponseWriter, req *http.Request) {
-	return func(w http.ResponseWriter, req *http.Request) {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			log.Printf("when reading request body, %v", err)
-			return
-		}
+func saveHandler(w http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		log.Printf("when reading request body, %v", err)
+		return
+	}
 
-		// write body to savePath
-		if err := os.WriteFile(savePath, body, 0755); err != nil {
-			log.Printf("when saving last read status to '%s', %v", savePath, err)
-		}
+	// write body to savePath
+	if err := os.WriteFile(b.readLaterPath, body, 0755); err != nil {
+		log.Printf("when saving last read status to '%s', %v", b.readLaterPath, err)
 	}
 }
 
-func bookItemHandler(item epub.Item, toc string, metadata string, lastRead string) func(w http.ResponseWriter, req *http.Request) {
+func serveBookPage(w http.ResponseWriter, file io.ReadCloser, toc string, info string) {
+
+	var lastRead string
+	if b.readLaterPath != "" {
+		lastRead = lastReadJS()
+	}
+	if lastRead == "" {
+		lastRead = "const lastRead = null;"
+	} else {
+		lastRead = "const lastRead = " + lastRead + ";"
+	}
+
+	// parse file, modify, and write
+	tokenizer := html.NewTokenizer(file)
+	var err error
+	for {
+		tokenType := tokenizer.Next()
+		token := tokenizer.Token()
+
+		switch tokenType {
+		case html.ErrorToken:
+			err = tokenizer.Err()
+		case html.EndTagToken:
+			if token.DataAtom == atom.Body {
+				// insert box html
+				w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, toc, configFrag, info)))
+				// insert script
+				w.Write([]byte("<script>" + html.EscapeString(lastRead+script) + "</script>\n"))
+			} else if token.DataAtom == atom.Head {
+				// insert style
+				w.Write([]byte("<style>" + html.EscapeString(style) + "</style>\n"))
+			}
+			fallthrough
+		default:
+			_, err = w.Write([]byte(token.String()))
+		}
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Printf("when tokenizing document, %v", err)
+			break
+		}
+	}
+
+}
+
+func bookItemHandler(item epub.Item, toc string, info string) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		file, err := item.Open()
@@ -280,37 +332,8 @@ func bookItemHandler(item epub.Item, toc string, metadata string, lastRead strin
 			}
 		}
 
-		// parse file, modify, and respond
-		tokenizer := html.NewTokenizer(file)
-		for {
-			tokenType := tokenizer.Next()
-			token := tokenizer.Token()
+		serveBookPage(w, file, toc, info)
 
-			switch tokenType {
-			case html.ErrorToken:
-				err = tokenizer.Err()
-			case html.EndTagToken:
-				if token.DataAtom == atom.Body {
-					// insert box html
-					_, err = w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, toc, configFrag, metadata)))
-					// insert script
-					_, err = w.Write([]byte("<script>" + html.EscapeString(lastRead+script) + "</script>\n"))
-				} else if token.DataAtom == atom.Head {
-					// insert style
-					_, err = w.Write([]byte("<style>" + html.EscapeString(style) + "</style>\n"))
-				}
-				fallthrough
-			default:
-				_, err = w.Write([]byte(token.String()))
-			}
-
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				log.Printf("when tokenizing document '%s', %v", dumpItem(item), err)
-				break
-			}
-		}
 	}
 }
 
@@ -337,8 +360,6 @@ func fileHash(path string) ([]byte, error) {
 func dumpItem(item epub.Item) string {
 	return item.ID + " <" + item.HREF + ">"
 }
-
-const emptyLastRead = "const lastRead = null;"
 
 //go:embed brv.js
 var script string
