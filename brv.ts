@@ -1,5 +1,15 @@
 
-declare const lastRead: {}
+declare const lastRead: LastRead
+
+interface LastRead {
+    href: string;
+    position: number;
+    "padding-left": string;
+    "padding-right": string;
+    "font-family": string;
+    "font-size": string;
+    "line-height": string;
+}
 
 interface TocPoint {
     anchor: HTMLAnchorElement;
@@ -32,6 +42,8 @@ const customiseOpts: CustomiseOpt[] = [
 let appBoxState = 0
 let tocPoints = makeTocPoints()
 
+applyLastRead()
+
 // set click handlers of some toc anchors
 tocPoints.forEach(({anchor}) => {
     anchor.addEventListener("click", () => {
@@ -43,21 +55,15 @@ tocPoints.forEach(({anchor}) => {
 document.body.addEventListener("keydown", handleKeyDown)
 
 // initial highlight current point in toc
+highlightToc()
+
 // respond to scrolling
-if (tocPoints.length > 0) {
-    if (tocPoints.length == 1) {
-        highlightToc(tocPoints[0].anchor)
-    } else {
-        highlightToc(findCurrentTocPoint())
-        document.addEventListener("scroll", throttle(onPageShift, 150))
-    }
-}
+document.addEventListener("scroll", debounce(onPageShift))
 
 // respond to resize
-window.addEventListener("resize", throttle(onPageReformat, 150))
+window.addEventListener("resize", debounce(onPageReformat))
 
-// config setup
-config()
+setupConfigButtons()
 
 //
 // functions
@@ -104,20 +110,21 @@ function hideAppBox() {
 
 function onPageShift() {
 
-    // highlight
-    const selected = findCurrentTocPoint()
-    highlightToc(selected)
+    // re-highlight
+    const curr = highlightToc()
 
-    // location
-    const href = selected.href
-    const hashIdx = href.indexOf("#")
-    if (hashIdx >= 0) {
-        const id = href.substring(hashIdx+1)
-        const elem = document.getElementById(id)
-        if (elem != null) {
-            elem.removeAttribute("id")
-            window.location.hash = "#" + id
-            elem.id = id
+    // update location as page shifts
+    if (tocPoints.length > 1 && curr) {
+        const href = curr.href
+        const hashIdx = href.indexOf("#")
+        if (hashIdx >= 0) {
+            const id = href.substring(hashIdx+1)
+            const elem = document.getElementById(id)
+            if (elem != null) {
+                elem.removeAttribute("id")
+                window.location.hash = "#" + id
+                elem.id = id
+            }
         }
     }
 
@@ -135,7 +142,7 @@ function onPageReformat() {
     onPageShift()
 }
 
-function findCurrentTocPoint(): HTMLAnchorElement {
+function currentTocPoint(): HTMLAnchorElement {
 
     const mid = window.scrollY + window.innerHeight/2
 
@@ -151,12 +158,20 @@ function findCurrentTocPoint(): HTMLAnchorElement {
     return tocPoints[curr < 0 ? 0 : curr].anchor
 }
 
-function highlightToc(a: HTMLAnchorElement) {
+function highlightToc() : HTMLAnchorElement | null {
+    if (tocPoints.length == 0) {
+        return null
+    }
+
+    const a = tocPoints.length == 1 ? tocPoints[0].anchor : currentTocPoint()
+
     const className = "current"
     tocPoints.forEach(({anchor}) => {
         anchor.parentElement!.classList.remove(className)
     })
     a.parentElement!.classList.add(className)
+
+    return a
 }
 
 // calculate the position of each toc target on the current page
@@ -200,18 +215,25 @@ function applyConfig() {
     onPageReformat()
 }
 
-function config() {
+function applyLastRead() {
 
-    // use last read if any
+    // scroll to last read
     if (lastRead) {
         customiseOpts.forEach(({input, cssKey}) => {
             input.value = lastRead[cssKey]
         })
     }
+    // otherwise, default values in config.html are used
 
     // apply to page
     applyConfig()
 
+    if (lastRead) {
+        window.scrollTo(0, scrollPositionFromLastRead(lastRead.position))
+    }
+}
+
+function setupConfigButtons() {
     // setup buttons respond to click
     document.getElementById("brv-apply-config")!.addEventListener("click", function() {
         applyConfig()
@@ -250,22 +272,25 @@ function saveLastRead() {
 }
 
 function readingPosition(): number {
-    // TODO
-    return 0
+    const pos = window.scrollY + window.innerHeight/4
+    return pos / document.body.clientHeight
 }
 
-function throttle(fn: () => void, wait: number): () => void {
-    let waiting = false
+function scrollPositionFromLastRead(lastReadPosition: number): number {
+    const pos = document.body.clientHeight * lastReadPosition
+    return pos - window.innerHeight/4
+}
+
+function debounce(fn: () => void, wait: number = 200): () => void {
+    let timeout: number;
 
     return function() {
-        if (waiting) {
-            return
+        const later = () => {
+            clearTimeout(timeout)
+            fn()
         }
 
-        waiting = true
-        setTimeout(() => {
-            fn.apply(this)
-            waiting = false
-        }, wait)
+        clearTimeout(timeout)
+        timeout = setTimeout(later, wait)
     }
 }
