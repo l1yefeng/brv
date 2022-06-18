@@ -203,7 +203,7 @@ function applyConfig() {
     customiseOpts.forEach(({input, cssKey, originalValue, setter}) => {
         // clean
         let inValue = input.value.trim()
-        if (input.type == "number") {
+        if (input.type == "number" && inValue != "") {
             const num: number = +inValue
             inValue = num.toString()
         }
