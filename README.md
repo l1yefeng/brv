@@ -31,3 +31,11 @@ e.g.
 - Dictionary by [Dictionary Anywhere](https://github.com/meetDeveloper/Dictionary-Anywhere)
 
 to name a few.
+
+## Development
+
+Build the Go program after transpiling .ts to .js and .less to .css.
+
+    > tsc -t es6 brv.ts
+    > lessc brv.less brv.css
+    > go build
