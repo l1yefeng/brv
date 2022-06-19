@@ -66,6 +66,13 @@ document.addEventListener("scroll", debounce(onPageShift))
 // respond to resize
 window.addEventListener("resize", debounce(onPageReformat))
 
+// click background to hide box
+boxElem.addEventListener("click", event => {
+    if (event.target == boxElem) {
+        hideAppBox()
+    }
+})
+
 setupConfigButtons()
 
 //
