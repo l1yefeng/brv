@@ -33,11 +33,11 @@
 
     // font size: relative to <html> and not scale with book font size
     font-size: 1rem;
-    line-height: 1.1;
+    line-height: 1.2;
   }
 }
 
-aside#brv-toc {
+#brv-box aside#brv-toc {
 
   h1 {
     padding-right: 2em;
@@ -69,18 +69,21 @@ aside#brv-toc {
 
 }
 
-aside#brv-ci {
+#brv-box aside#brv-ci {
 
   &, input {
-    font-family: monospace;
+    // copied from GitHub
+    font-family: ui-monospace, "SFMono-Regular", "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
   }
 
   section {
     margin: 1em;
     padding: 1em 2em;
 
+    font-size: 0.9em;
+
     h2 {
-      font-size: 1.2em;
+      font-size: 1.1em;
     }
   }
 
