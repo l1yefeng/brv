@@ -1,5 +1,8 @@
 
-declare const lastRead: LastRead
+// these declared variables are inserted in main.go
+declare const lastRead: LastRead | null
+declare const nextHref: string
+declare const prevHref: string
 
 interface LastRead {
     href: string;
@@ -75,7 +78,7 @@ function handleKeyDown(event: KeyboardEvent) {
         return
     }
 
-    switch (event.code) {
+    switch (event.key) {
 
         case "Escape":
 
@@ -85,7 +88,7 @@ function handleKeyDown(event: KeyboardEvent) {
             }
             break
 
-        case "Space":
+        case " ":
 
             event.preventDefault()
 
@@ -100,6 +103,17 @@ function handleKeyDown(event: KeyboardEvent) {
             [boxElem.style.display, tocElem.style.display, ciElem.style.display] = displayValues[appBoxState]
 
             break
+
+        case "<":
+            event.preventDefault()
+            window.location.pathname = "/" + prevHref
+            break
+
+        case ">":
+            event.preventDefault()
+            window.location.pathname = "/" + nextHref
+            break
+
     }
 }
 

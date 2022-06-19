@@ -27,6 +27,8 @@ var b struct {
 	path          string
 	readLaterPath string
 	book          *epub.Rootfile
+	tocHtml       string
+	infoHtml      string
 }
 
 func main() {
@@ -48,31 +50,30 @@ func main() {
 	b.book = rc.Rootfiles[0] // set .book
 
 	// read later file path
-	b.readLaterPath = readLaterPath() // set .readLaterPath, all set
+	b.readLaterPath = readLaterPath() // set .readLaterPath
 
 	// build toc
-	var toc string
 	for _, item := range b.book.Manifest.Items {
 		if item.ID == "ncx" {
-			toc = tocHtml(item)
+			b.tocHtml = tocHtml(item) // set .tocHtml
 			break
 		}
 	}
-
-	if toc == "" {
+	if b.tocHtml == "" {
 		log.Printf("couldn't build table of content")
 	} else {
 		log.Printf("built table of content")
 	}
+
+	b.infoHtml = infoHtml() // set .infoHtml, all set
 
 	if b.readLaterPath != "" {
 		http.HandleFunc("/save_brv", saveHandler)
 	}
 
 	// create book file request handlers
-	info := infoHtml()
-	for _, item := range b.book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, bookItemHandler(item, toc, info))
+	for i, item := range b.book.Manifest.Items {
+		http.HandleFunc("/"+item.HREF, bookItemHandler(i))
 	}
 
 	http.HandleFunc("/", rootHandler)
@@ -251,17 +252,13 @@ func saveHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func serveBookPage(w http.ResponseWriter, file io.ReadCloser, toc string, info string) {
+func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, prev string, next string) {
 
-	var lastRead string
-	if b.readLaterPath != "" {
-		lastRead = lastReadJS()
-	}
 	if lastRead == "" {
-		lastRead = "const lastRead = null;"
-	} else {
-		lastRead = "const lastRead = " + lastRead + ";"
+		lastRead = "null"
 	}
+	js := fmt.Sprintf("const prevHref=\"%s\"; const nextHref=\"%s\"; const lastRead=%s; %s",
+		prev, next, lastRead, script)
 
 	// parse file, modify, and write
 	tokenizer := html.NewTokenizer(file)
@@ -276,9 +273,9 @@ func serveBookPage(w http.ResponseWriter, file io.ReadCloser, toc string, info s
 		case html.EndTagToken:
 			if token.DataAtom == atom.Body {
 				// insert box html
-				w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, toc, configFrag, info)))
+				w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, b.tocHtml, configFrag, b.infoHtml)))
 				// insert script
-				w.Write([]byte("<script>" + html.EscapeString(lastRead+script) + "</script>\n"))
+				w.Write([]byte("<script>" + html.EscapeString(js) + "</script>\n"))
 			} else if token.DataAtom == atom.Head {
 				// insert style
 				w.Write([]byte("<style>" + html.EscapeString(style) + "</style>\n"))
@@ -298,7 +295,9 @@ func serveBookPage(w http.ResponseWriter, file io.ReadCloser, toc string, info s
 
 }
 
-func bookItemHandler(item epub.Item, toc string, info string) func(w http.ResponseWriter, req *http.Request) {
+func bookItemHandler(i int) func(w http.ResponseWriter, req *http.Request) {
+	item := b.book.Manifest.Items[i]
+
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		file, err := item.Open()
@@ -334,8 +333,44 @@ func bookItemHandler(item epub.Item, toc string, info string) func(w http.Respon
 			}
 		}
 
-		serveBookPage(w, file, toc, info)
+		// read-later data, used to recover reading position and customised styles
+		var lastRead string
+		if b.readLaterPath != "" {
+			lastRead = lastReadJS()
+			if lastRead != "" {
+				// reset position if stored href is not the one requested
+				lastHref := lastReadHref(lastRead)
+				if !strings.Contains(req.URL.Path, lastHref) {
+					lastRead = resetPositionLastRead(lastRead)
+				}
+			}
+		}
 
+		// prev/next page href, used for client navigation
+		var prev, next string
+		if i-1 >= 0 {
+			prev = b.book.Manifest.Items[i-1].HREF
+		}
+		if i+1 < len(b.book.Manifest.Items) {
+			next = b.book.Manifest.Items[i+1].HREF
+		}
+
+		serveBookPage(w, file, lastRead, prev, next)
+
+	}
+}
+
+func resetPositionLastRead(js string) string {
+	re := regexp.MustCompile(`"position" *: *(-?[0-9\.]*)`)
+	return re.ReplaceAllLiteralString(js, `"position":0`)
+}
+
+func lastReadHref(js string) string {
+	re := regexp.MustCompile(`"href" *: *"([^"]*)"`)
+	if matches := re.FindStringSubmatch(js); len(matches) > 1 {
+		return matches[1]
+	} else {
+		return ""
 	}
 }
 
@@ -344,14 +379,8 @@ func rootHandler(w http.ResponseWriter, req *http.Request) {
 	var startHref string
 
 	if b.readLaterPath != "" {
-		lastRead := lastReadJS()
-
-		re := regexp.MustCompile(`"href" *: *"([^"]*)"`)
-		if matches := re.FindStringSubmatch(lastRead); len(matches) > 1 {
-			startHref = matches[1]
-		}
+		startHref = lastReadHref(lastReadJS())
 	}
-
 	if startHref == "" {
 		startHref = "/" + b.book.Spine.Itemrefs[0].HREF
 	}
