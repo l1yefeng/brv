@@ -264,8 +264,8 @@ function setupCustomiseControl() {
     customiseOpts.forEach(({input}) => {
         input.addEventListener("keydown", event => {
             if (event.key == "Enter") {
-                event.preventDefault()
-                okBtn.click()
+                event.preventDefault();
+                (event.shiftKey ? applyBtn : okBtn).click()
             }
         })
     })
