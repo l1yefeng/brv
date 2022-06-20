@@ -17,18 +17,18 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
-        
+
     - name: Set up Node
       uses: actions/setup-node@v3
       with:
         node-version: 14
-        
+
     - name: Install TypeScript and Less
       run: npm i typescript less
-      
+
     - name: Transpile script
-      run: npx tsc -t es6 brv.ts
-      
+      run: npx tsc -t es6 --removeComments brv.ts
+
     - name: Transpile stylesheet
       run: npx lessc brv.less brv.css
 
