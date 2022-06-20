@@ -7,19 +7,30 @@
         <section id="brv-info">
             <h2>Book properties</h2>
             <table>
-                %s <!-- info -->
+                <tbody>
+                    %s <!-- info -->
+                </tbody>
             </table>
         </section>
         <section>
             <h2>About brv</h2>
             <p><strong>brv</strong> is a simple program that renders EPUB ebooks in your favourite web browser.</p>
-            <p>Controls:</p>
-            <ul>
-                <li>press <kbd>Space</kbd> to show the table of content or the current page</li>
-                <li>press <kbd>&lt;</kbd> to go to the previous page</li>
-                <li>press <kbd>&gt;</kbd> to go to the next page</li>
-            </ul>
-            <p style="text-align:center"><a href="https://github.com/l1yefeng/brv" target="_blank">Source</a></p>
+            <table>
+                <tbody>
+                    <tr>
+                        <th>Program location</th>
+                        <td class="brv-path">
+                            %s <!-- brv path -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Program version</th>
+                        <td>&beta;</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Controls: use <kbd>Space</kbd> to show the table of content or this page; use <kbd>&lt;</kbd> and <kbd>&gt;</kbd> to turn pages.</p>
+            <p style="text-align:center"><a href="https://github.com/l1yefeng/brv" target="_blank">GitHub</a></p>
         </section>
     </aside>
 </div>

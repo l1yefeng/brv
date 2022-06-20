@@ -262,8 +262,8 @@ func infoHtml() string {
 	appendRow("Rights", md.Rights)
 	appendRow("Source", md.Source)
 
-	appendRow("Location", b.path)
-	appendRow("Read later", b.readLaterPath)
+	src += `<tr><th>Location</th><td class="brv-path">` + html.EscapeString(b.path) + `</td></tr>`
+	src += `<tr><th>Saved</th><td class="brv-path">` + html.EscapeString(b.readLaterPath) + `</td></tr>`
 
 	return src
 }
@@ -289,6 +289,8 @@ func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, p
 	js := fmt.Sprintf("const prevHref=\"%s\"; const nextHref=\"%s\"; const lastRead=%s; %s",
 		prev, next, lastRead, script)
 
+	exe, _ := os.Executable()
+
 	// parse file, modify, and write
 	tokenizer := html.NewTokenizer(file)
 	var err error
@@ -302,7 +304,7 @@ func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, p
 		case html.EndTagToken:
 			if token.DataAtom == atom.Body {
 				// insert box html
-				w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, b.tocHtml, configFrag, b.infoHtml)))
+				w.Write([]byte(fmt.Sprintf(appBoxHtmlFmt, b.tocHtml, configFrag, b.infoHtml, exe)))
 				// insert script
 				w.Write([]byte("<script>" + html.EscapeString(js) + "</script>\n"))
 			} else if token.DataAtom == atom.Head {
