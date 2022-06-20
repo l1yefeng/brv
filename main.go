@@ -341,7 +341,7 @@ func bookItemHandler(i int) func(w http.ResponseWriter, req *http.Request) {
 				// reset position if stored href is not the one requested
 				lastHref := lastReadHref(lastRead)
 				if !strings.Contains(req.URL.Path, lastHref) {
-					lastRead = resetPositionLastRead(lastRead)
+					lastRead = deleteLastReadPosition(lastRead)
 				}
 			}
 		}
@@ -360,9 +360,9 @@ func bookItemHandler(i int) func(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func resetPositionLastRead(js string) string {
-	re := regexp.MustCompile(`"position" *: *(-?[0-9\.]*)`)
-	return re.ReplaceAllLiteralString(js, `"position":0`)
+func deleteLastReadPosition(js string) string {
+	re := regexp.MustCompile(`"(position|href)" *: *[^,\}]*,?`)
+	return re.ReplaceAllLiteralString(js, "")
 }
 
 func lastReadHref(js string) string {

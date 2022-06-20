@@ -5,8 +5,8 @@ declare const nextHref: string
 declare const prevHref: string
 
 interface LastRead {
-    href: string;
-    position: number;
+    href: string | undefined;
+    position: number | undefined;
     "padding-left": string;
     "padding-right": string;
     "font-family": string;
@@ -251,7 +251,7 @@ function applyLastRead() {
     // apply to page
     applyConfig()
 
-    if (lastRead) {
+    if (lastRead && lastRead.position) {
         window.scrollTo(0, scrollPositionFromLastRead(lastRead.position))
     }
 }
