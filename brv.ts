@@ -276,6 +276,7 @@ function setupCustomiseControl() {
     const updateMaster = () => {
         mlElem.dataset.master = mlElem.value == mrElem.value ? "1" : "0"
     }
+    updateMaster()
     mlElem.addEventListener("input", () => {
         if (mlElem.dataset.master == "1") {
             mrElem.value = mlElem.value
