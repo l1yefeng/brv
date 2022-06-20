@@ -389,11 +389,6 @@ func rootHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(307)
 }
 
-const BoxID = "brv-box"
-const ConfigInfoID = "brv-ci"
-const InfoID = "brv-info"
-const TocID = "brv-toc"
-
 func fileHash(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
