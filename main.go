@@ -79,7 +79,7 @@ func main() {
 	http.HandleFunc("/", rootHandler)
 
 	// identify the start page
-	log.Printf("book ready at http://localhost:8004/")
+	log.Printf("book ready at http://localhost:8004")
 
 	// start server on 8004
 	log.Fatal(http.ListenAndServe(":8004", nil))
