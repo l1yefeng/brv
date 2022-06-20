@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	_ "embed"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -31,13 +32,27 @@ var b struct {
 	infoHtml      string
 }
 
+var flags struct {
+	portNumber int
+	printUsage bool
+}
+
 func main() {
 
+	// flags
+	parseFlags()
+
+	if flags.printUsage {
+		flag.Usage()
+		os.Exit(0)
+	}
+
 	// check cmd args
-	if len(os.Args) != 2 {
+	if flag.Arg(0) == "" {
+		flag.Usage()
 		os.Exit(ErrCmdArgs)
 	}
-	b.path = os.Args[1] // set .path
+	b.path = flag.Arg(0) // set .path
 
 	// open book
 	rc, err := epub.OpenReader(b.path)
@@ -79,10 +94,24 @@ func main() {
 	http.HandleFunc("/", rootHandler)
 
 	// identify the start page
-	log.Printf("book ready at http://localhost:8004")
+	log.Printf("book ready at http://localhost:%d", flags.portNumber)
 
 	// start server on 8004
-	log.Fatal(http.ListenAndServe(":8004", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", flags.portNumber), nil))
+}
+
+func parseFlags() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `brv, a epub reader in web browsers
+usage:
+        %s [flags] <book>
+flags:
+`, os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.IntVar(&flags.portNumber, "p", 8004, "port number")
+	flag.BoolVar(&flags.printUsage, "h", false, "print this usage")
+	flag.Parse()
 }
 
 func readLaterPath() string {
