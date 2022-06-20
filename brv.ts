@@ -49,9 +49,7 @@ applyLastRead()
 
 // set click handlers of some toc anchors
 tocPoints.forEach(({anchor}) => {
-    anchor.addEventListener("click", () => {
-        hideAppBox()
-    })
+    anchor.addEventListener("click", hideAppBox)
 })
 
 // respond to keys
@@ -73,7 +71,7 @@ boxElem.addEventListener("click", event => {
     }
 })
 
-setupConfigButtons()
+setupCustomiseControl()
 
 //
 // functions
@@ -107,7 +105,11 @@ function handleKeyDown(event: KeyboardEvent) {
 
             appBoxState += event.shiftKey ? 2 : 1
             appBoxState %= 3;
-            [boxElem.style.display, tocElem.style.display, ciElem.style.display] = displayValues[appBoxState]
+            [
+                boxElem.style.display,
+                tocElem.style.display,
+                ciElem.style.display,
+            ] = displayValues[appBoxState]
 
             break
 
@@ -254,13 +256,41 @@ function applyLastRead() {
     }
 }
 
-function setupConfigButtons() {
+function setupCustomiseControl() {
+    const applyBtn = document.getElementById("brv-apply-config")!
+    const okBtn = document.getElementById("brv-ok-config")!
+
+    // setup inputs respond to enter
+    customiseOpts.forEach(({input}) => {
+        input.addEventListener("keydown", event => {
+            if (event.key == "Enter") {
+                event.preventDefault()
+                okBtn.click()
+            }
+        })
+    })
+
+    // right margin changes with left if they are the same
+    const mlElem = customiseOpts[0].input
+    const mrElem = customiseOpts[1].input
+    const updateMaster = () => {
+        mlElem.dataset.master = mlElem.value == mrElem.value ? "1" : "0"
+    }
+    mlElem.addEventListener("input", () => {
+        if (mlElem.dataset.master == "1") {
+            mrElem.value = mlElem.value
+        }
+    });
+    [mlElem, mrElem].forEach(elem => {
+        elem.addEventListener("change", updateMaster)
+    })
+
     // setup buttons respond to click
-    document.getElementById("brv-apply-config")!.addEventListener("click", function() {
+    applyBtn.addEventListener("click", function() {
         applyConfig()
         saveLastRead()
     })
-    document.getElementById("brv-ok-config")!.addEventListener("click", function() {
+    okBtn.addEventListener("click", function() {
         applyConfig()
         hideAppBox()
         saveLastRead()
