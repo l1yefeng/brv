@@ -20,11 +20,14 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// Error codes returned by this program
 const (
 	ErrCmdArgs = 1
 	ErrEpub
 )
 
+// The one and only book data.
+// Its fields are set at the beginning of main() and don't change
 var b struct {
 	path          string
 	readLaterPath string
@@ -33,6 +36,7 @@ var b struct {
 	infoHtml      string
 }
 
+// Command line flags
 var flags struct {
 	portNumber int
 	printUsage bool
@@ -40,7 +44,7 @@ var flags struct {
 
 func main() {
 
-	// flags
+	// parse flags
 	parseFlags()
 
 	if flags.printUsage {
@@ -48,7 +52,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// check cmd args
+	// exit if no book file is provided
 	if flag.Arg(0) == "" {
 		flag.Usage()
 		os.Exit(ErrCmdArgs)
@@ -65,10 +69,10 @@ func main() {
 	log.Printf("opened book at %s", b.path)
 	b.book = rc.Rootfiles[0] // set .book
 
-	// read later file path
+	// compute read later file path
 	b.readLaterPath = readLaterPath() // set .readLaterPath
 
-	// build toc
+	// build toc and info html
 	for _, item := range b.book.Manifest.Items {
 		if item.ID == "ncx" {
 			b.tocHtml = tocHtml(item) // set .tocHtml
@@ -83,21 +87,22 @@ func main() {
 
 	b.infoHtml = infoHtml() // set .infoHtml, all set
 
+	// server: requesting to save last read data
 	if b.readLaterPath != "" {
-		http.HandleFunc("/save_brv", saveHandler)
+		http.HandleFunc("/save_brv", saveLastRead)
 	}
 
-	// create book file request handlers
+	// server: requesting book items
 	for i, item := range b.book.Manifest.Items {
-		http.HandleFunc("/"+item.HREF, bookItemHandler(i))
+		http.HandleFunc("/"+item.HREF, serveItem(i))
 	}
 
-	http.HandleFunc("/", rootHandler)
+	// server: requesting the book without specific item
+	http.HandleFunc("/", redirectToLastReadOrBeginning)
 
-	// identify the start page
 	log.Printf("book ready at http://localhost:%d (use ^C to exit)", flags.portNumber)
 
-	// ctrl-c
+	// exit upon ^C
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	go func() {
@@ -107,10 +112,11 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// start server on 8004
+	// start server
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", flags.portNumber), nil))
 }
 
+// Customise the usage messaage and setup how to parse the flags
 func parseFlags() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), `brv, a epub reader in web browsers
@@ -125,6 +131,8 @@ flags:
 	flag.Parse()
 }
 
+// Return the read later file path of this book
+// Its filename is computed by fileHash()
 func readLaterPath() string {
 
 	// calculate path
@@ -145,6 +153,7 @@ func readLaterPath() string {
 	return filepath.Join(dir, fmt.Sprintf("%x", hash))
 }
 
+// Return the content of last read file
 func lastReadJS() string {
 
 	// open rl file
@@ -159,6 +168,8 @@ func lastReadJS() string {
 	return string(raw)
 }
 
+// Return the HTML source of toc.
+// It is built by transforming ncx file (xml) into HTML list of anchors
 func tocHtml(ncx epub.Item) string {
 	file, err := ncx.Open()
 	defer func() {
@@ -247,6 +258,7 @@ func tocHtml(ncx epub.Item) string {
 	}
 }
 
+// Return the HTML source of info including book metadata and book file info
 func infoHtml() string {
 	var src string
 
@@ -279,7 +291,9 @@ func infoHtml() string {
 	return src
 }
 
-func saveHandler(w http.ResponseWriter, req *http.Request) {
+// Save the request body (should be a JSON file) to read later path.
+// Write nothing to response.
+func saveLastRead(w http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		log.Printf("when reading request body, %v", err)
@@ -292,6 +306,12 @@ func saveHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Write book page document to response.
+// The book page file is extracted from epub, and some data is inserted:
+//	HTML: the app box (toc, customisation, info) `appBoxHtmlFmt`
+//	JS:	  client script `js`
+//	CSS:  `style`
+// before the file is written to response.
 func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, prev string, next string) {
 
 	if lastRead == "" {
@@ -337,7 +357,9 @@ func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, p
 
 }
 
-func bookItemHandler(i int) func(w http.ResponseWriter, req *http.Request) {
+// Write the epub item to response.
+// Documents are handled specially with `serveBookPage`; others are unmodifed.
+func serveItem(i int) func(w http.ResponseWriter, req *http.Request) {
 	item := b.book.Manifest.Items[i]
 
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -402,11 +424,13 @@ func bookItemHandler(i int) func(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Return the last read `js` without href or position
 func deleteLastReadPosition(js string) string {
 	re := regexp.MustCompile(`"(position|href)" *: *[^,\}]*,?`)
 	return re.ReplaceAllLiteralString(js, "")
 }
 
+// Return the href value in the last read data `js`
 func lastReadHref(js string) string {
 	re := regexp.MustCompile(`"href" *: *"([^"]*)"`)
 	if matches := re.FindStringSubmatch(js); len(matches) > 1 {
@@ -416,7 +440,8 @@ func lastReadHref(js string) string {
 	}
 }
 
-func rootHandler(w http.ResponseWriter, req *http.Request) {
+// Write code 307 to redirect
+func redirectToLastReadOrBeginning(w http.ResponseWriter, req *http.Request) {
 
 	var startHref string
 
@@ -431,6 +456,7 @@ func rootHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(307)
 }
 
+// Generate a unique filename for this book by MD5
 func fileHash(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -446,6 +472,7 @@ func fileHash(path string) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
+// Return stringified item
 func dumpItem(item epub.Item) string {
 	return item.ID + " <" + item.HREF + ">"
 }
