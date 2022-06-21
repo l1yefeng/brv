@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -94,7 +95,17 @@ func main() {
 	http.HandleFunc("/", rootHandler)
 
 	// identify the start page
-	log.Printf("book ready at http://localhost:%d", flags.portNumber)
+	log.Printf("book ready at http://localhost:%d (use ^C to exit)", flags.portNumber)
+
+	// ctrl-c
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		<-ch
+		fmt.Print("\r")
+		log.Printf("bye")
+		os.Exit(0)
+	}()
 
 	// start server on 8004
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", flags.portNumber), nil))
