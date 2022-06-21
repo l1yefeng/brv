@@ -53,7 +53,7 @@ tocPoints.forEach(({anchor}) => {
 })
 
 // respond to keys
-document.body.addEventListener("keydown", handleKeyDown)
+document.addEventListener("keydown", handleKeyDown)
 
 // initial highlight current point in toc
 highlightToc()
