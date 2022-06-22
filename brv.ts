@@ -14,21 +14,19 @@ interface LastRead {
     "line-height": string;
 }
 
+// a toc navigation point, for those whose target elem is on current page
 interface TocPoint {
-    anchor: HTMLAnchorElement;
-    pos: number;
+    anchor: HTMLAnchorElement;  // <a> in toc, constant
+    pos: number;                // y-position of target of <a>
 }
 
+// customisation option
 interface CustomiseOpt {
-    input: HTMLInputElement;
-    cssKey: string;
-    originalValue: string;
-    setter: (value: string) => string;
+    input: HTMLInputElement;            // <input>, constant
+    cssKey: string;                     // <body> css property name it controls
+    originalValue: string;              // value set in the epub
+    setter: (value: string) => string;  // how to compute css value from input
 }
-
-const boxElem = document.getElementById("brv-box")!
-const tocElem = document.getElementById("brv-toc")!
-const ciElem = document.getElementById("brv-ci")!
 
 const customiseOpts: CustomiseOpt[] = [
     initCustomiseOpt("brv-left-margin", v => v+"%"),
@@ -38,33 +36,46 @@ const customiseOpts: CustomiseOpt[] = [
     initCustomiseOpt("brv-line-height", v => v),
 ]
 
+const boxElem = document.getElementById("brv-box")!
+const tocElem = document.getElementById("brv-toc")!
+const ciElem = document.getElementById("brv-ci")!
+
 //
 // setup
 //
 
+// the app box is the toc/customisation/info/about modal
+// that floats on top of book pages
+//  0: hidden
+//  1: toc
+//  2: customisation + info + about
 let appBoxState = 0
+
+// toc points for this page
+// the .pos will change whenever the page resizes or the typography changes
 let tocPoints = makeTocPoints()
 
+// use the customisation saved from last read
 applyLastRead()
 
-// set click handlers of some toc anchors
+// highlight current point in toc
+highlightToc()
+
+// make it respond to keydown
+document.addEventListener("keydown", onKeyDown)
+
+// make it respond to scrolling
+document.addEventListener("scroll", debounce(onPageShift))
+
+// make it respond to page resize
+window.addEventListener("resize", debounce(onPageReformat))
+
+// going to a target on the same page should hide toc
 tocPoints.forEach(({anchor}) => {
     anchor.addEventListener("click", hideAppBox)
 })
 
-// respond to keys
-document.addEventListener("keydown", handleKeyDown)
-
-// initial highlight current point in toc
-highlightToc()
-
-// respond to scrolling
-document.addEventListener("scroll", debounce(onPageShift))
-
-// respond to resize
-window.addEventListener("resize", debounce(onPageReformat))
-
-// click background to hide box
+// clicking the background should hide box
 boxElem.addEventListener("click", event => {
     if (event.target == boxElem) {
         hideAppBox()
@@ -77,7 +88,7 @@ setupCustomiseControl()
 // functions
 //
 
-function handleKeyDown(event: KeyboardEvent) {
+function onKeyDown(event: KeyboardEvent) {
     if (event.target instanceof Element &&
         event.target.tagName.toLowerCase() == "input") {
         return
@@ -103,6 +114,7 @@ function handleKeyDown(event: KeyboardEvent) {
                 ["block", "none", "block"],
             ]
 
+            // show/hide the box according to appBoxState
             appBoxState += event.shiftKey ? 2 : 1
             appBoxState %= 3;
             [
@@ -131,6 +143,9 @@ function hideAppBox() {
     appBoxState = 0
 }
 
+// do what's necessary when the page shifts:
+//  update and highlight current toc point, save position for later
+// should be called when page is shifted due to scrolling and more
 function onPageShift() {
 
     // re-highlight
@@ -157,16 +172,16 @@ function onPageShift() {
 }
 
 function onPageReformat() {
-
     // re-calculate toc target positions
     tocPoints = makeTocPoints()
-
     // re-highlight
     onPageShift()
 }
 
+// return the <a> point which is considered currently being read
 function currentTocPoint(): HTMLAnchorElement {
 
+    // section is being read if its top y-position is past mid
     const mid = window.scrollY + window.innerHeight/2
 
     let curr: number
@@ -181,6 +196,8 @@ function currentTocPoint(): HTMLAnchorElement {
     return tocPoints[curr < 0 ? 0 : curr].anchor
 }
 
+// highlight (by updating elem class) current point.
+// return it if exists.
 function highlightToc() : HTMLAnchorElement | null {
     if (tocPoints.length == 0) {
         return null
@@ -197,7 +214,8 @@ function highlightToc() : HTMLAnchorElement | null {
     return a
 }
 
-// calculate the position of each toc target on the current page
+// set .anchor (always the same on every call).
+// set .pos, calculate the position of each toc target on the current page.
 function makeTocPoints(): TocPoint[] {
     const pageHref = window.location.pathname
     const anchors = tocElem.querySelectorAll<HTMLAnchorElement>(`a[href^="${pageHref}"]`)
@@ -302,7 +320,7 @@ function initCustomiseOpt(id: string, setter: (value: string) => string): Custom
     const input = document.getElementById(id) as HTMLInputElement
     const cssKey = input.name
     const originalValue = document.body.style[cssKey]
-    return { input, cssKey, originalValue, setter }
+    return {input, cssKey, originalValue, setter}
 }
 
 function saveLastRead() {
@@ -328,11 +346,13 @@ function readingPosition(): number {
     return pos / document.body.clientHeight
 }
 
+// the inverse of readingPosition()
 function scrollPositionFromLastRead(lastReadPosition: number): number {
     const pos = document.body.clientHeight * lastReadPosition
     return pos - window.innerHeight/4
 }
 
+// return a version of fn that won't be called too often
 function debounce(fn: () => void, wait: number = 200): () => void {
     let timeout: number;
 
