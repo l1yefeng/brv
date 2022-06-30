@@ -38,8 +38,9 @@ var b struct {
 
 // Command line flags
 var flags struct {
-	portNumber int
-	printUsage bool
+	portNumber   int
+	printUsage   bool
+	justMetadata bool
 }
 
 func main() {
@@ -66,8 +67,13 @@ func main() {
 		os.Exit(ErrEpub)
 	}
 	defer rc.Close()
-	log.Printf("opened book at %s", b.path)
 	b.book = rc.Rootfiles[0] // set .book
+
+	// if just need metadata
+	if flags.justMetadata {
+		printMetadata()
+		os.Exit(0)
+	}
 
 	// compute read later file path
 	b.readLaterPath = readLaterPath() // set .readLaterPath
@@ -81,8 +87,6 @@ func main() {
 	}
 	if b.tocHtml == "" {
 		log.Printf("couldn't build table of content")
-	} else {
-		log.Printf("built table of content")
 	}
 
 	b.infoHtml = infoHtml() // set .infoHtml, all set
@@ -127,8 +131,35 @@ flags:
 		flag.PrintDefaults()
 	}
 	flag.IntVar(&flags.portNumber, "p", 8004, "port number")
+	flag.BoolVar(&flags.justMetadata, "m", false, "print book metadata")
 	flag.BoolVar(&flags.printUsage, "h", false, "print this usage")
 	flag.Parse()
+}
+
+func printMetadata() {
+
+	printEntry := func(label string, value string) {
+		if value != "" {
+			fmt.Printf("%s : %s\n", label, value)
+		}
+	}
+
+	md := &b.book.Metadata
+
+	printEntry("Title      ", md.Title)
+	printEntry("Creator    ", md.Creator)
+	printEntry("Contributor", md.Contributor)
+	printEntry("Publisher  ", md.Publisher)
+	printEntry("Language   ", md.Language)
+	printEntry("Description", md.Description)
+	printEntry("Subject    ", md.Subject)
+	printEntry("Identifier ", md.Identifier)
+	printEntry("Format     ", md.Format)
+	printEntry("Type       ", md.Type)
+	printEntry("Coverage   ", md.Coverage)
+	printEntry("Relations  ", md.Relation)
+	printEntry("Rights     ", md.Rights)
+	printEntry("Source     ", md.Source)
 }
 
 // Return the read later file path of this book
