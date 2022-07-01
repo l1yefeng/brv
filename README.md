@@ -1,5 +1,5 @@
 # brv
-A EPUB reader in web browsers
+An EPUB reader in web browsers
 
 ## Usage
 
