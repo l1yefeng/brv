@@ -340,7 +340,7 @@ func saveLastRead(w http.ResponseWriter, req *http.Request) {
 // Write book page document to response.
 // The book page file is extracted from epub, and some data is inserted:
 //	HTML: the app box (toc, customisation, info) `appBoxHtmlFmt`
-//	JS:	  client script `js`
+//	JS:   client script `js`
 //	CSS:  `style`
 // before the file is written to response.
 func serveBookPage(w http.ResponseWriter, file io.ReadCloser, lastRead string, prev string, next string) {

@@ -127,12 +127,20 @@ function onKeyDown(event: KeyboardEvent) {
 
         case "<":
             event.preventDefault()
-            window.location.pathname = "/" + prevHref
+            if (prevHref) {
+                window.location.pathname = "/" + prevHref
+            } else {
+                window.alert("No page before this.")
+            }
             break
 
         case ">":
             event.preventDefault()
-            window.location.pathname = "/" + nextHref
+            if (nextHref) {
+                window.location.pathname = "/" + nextHref
+            } else {
+                window.alert("No page behind this.")
+            }
             break
 
     }
