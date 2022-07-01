@@ -3,8 +3,7 @@ A EPUB reader in web browsers
 
 ## Usage
 
-    > brv path/to/book.epub
-    book ready at http://localhost:8004
+    brv path/to/book.epub
     
 Then, go to http://localhost:8004 in your choice of web browser to read the book.
 
@@ -36,6 +35,6 @@ to name a few.
 
 Build the Go program after transpiling .ts to .js and .less to .css.
 
-    > tsc -t es6 brv.ts
-    > lessc brv.less brv.css
-    > go build
+    tsc -t es6 brv.ts
+    lessc brv.less brv.css
+    go build
