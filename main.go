@@ -443,11 +443,16 @@ func serveItem(i int) func(w http.ResponseWriter, req *http.Request) {
 
 		// prev/next page href, used for client navigation
 		var prev, next string
-		if i-1 >= 0 {
-			prev = b.book.Manifest.Items[i-1].HREF
-		}
-		if i+1 < len(b.book.Manifest.Items) {
-			next = b.book.Manifest.Items[i+1].HREF
+		for page, ref := range b.book.Spine.Itemrefs {
+			if *ref.Item == b.book.Manifest.Items[i] {
+				if page-1 >= 0 {
+					prev = b.book.Spine.Itemrefs[page-1].HREF
+				}
+				if page+1 < len(b.book.Spine.Itemrefs) {
+					next = b.book.Spine.Itemrefs[page+1].HREF
+				}
+				break
+			}
 		}
 
 		serveBookPage(w, file, lastRead, prev, next)
