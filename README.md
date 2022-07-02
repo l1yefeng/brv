@@ -1,5 +1,5 @@
 # brv
-A EPUB reader in web browsers
+An EPUB reader in web browsers
 
 ## Usage
 
@@ -15,6 +15,8 @@ Keyboard controls:
 - Press <kbd>&lt;</kbd> to go to the previous page.
 - Press <kbd>&gt;</kbd> to go to the next page.
 
+Some extra in [Wiki](https://github.com/l1yefeng/brv/wiki)
+
 ## Functions of brv
 
 - Remembering last read position.
@@ -23,13 +25,7 @@ Keyboard controls:
 
 Book page rendering and many functions are built into browsers, such as jumping back and forth in history. 
 In addition, some features can be added from the web browser using extensions, 
-e.g.
-
-- Dark mode by [Dark Reader](https://darkreader.org)
-- Vi keymap by [Vimium](https://github.com/philc/vimium)
-- Dictionary by [Dictionary Anywhere](https://github.com/meetDeveloper/Dictionary-Anywhere)
-
-to name a few.
+e.g. dark mode, vi keymap, dictionary, to name a few.
 
 ## Development
 
