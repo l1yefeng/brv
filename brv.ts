@@ -164,6 +164,8 @@ function onPageShift() {
         const href = curr.href
         const hashIdx = href.indexOf("#")
         if (hashIdx >= 0) {
+
+            // location
             const id = href.substring(hashIdx+1)
             const elem = document.getElementById(id)
             if (elem != null) {
@@ -171,7 +173,12 @@ function onPageShift() {
                 window.location.hash = "#" + id
                 elem.id = id
             }
+
+            // title
+            document.title = curr.textContent
         }
+    } else if (tocPoints.length == 1) {
+        document.title = tocPoints[0].anchor.textContent
     }
 
     // save last read
