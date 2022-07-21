@@ -51,6 +51,11 @@ const ciElem = document.getElementById("brv-ci")!
 //  2: customisation + info + about
 let appBoxState = 0
 
+// set document language
+if (!document.documentElement.lang) {
+    setLang()
+}
+
 // toc points for this page
 // the .pos will change whenever the page resizes or the typography changes
 let tocPoints = makeTocPoints()
@@ -175,10 +180,10 @@ function onPageShift() {
             }
 
             // title
-            document.title = curr.textContent
+            document.title = curr.textContent!
         }
     } else if (tocPoints.length == 1) {
-        document.title = tocPoints[0].anchor.textContent
+        document.title = tocPoints[0].anchor.textContent!
     }
 
     // save last read
@@ -191,6 +196,18 @@ function onPageReformat() {
     tocPoints = makeTocPoints()
     // re-highlight
     onPageShift()
+}
+
+function setLang() {
+    const infoElem = document.getElementById("brv-info")!
+    for (const tr of infoElem.querySelectorAll("tr")) {
+        const th = tr.children[0]
+        const td = tr.children[1]
+        if (th.textContent == "Language") {
+            document.documentElement.lang = td.textContent!
+            break
+        }
+    }
 }
 
 // return the <a> point which is considered currently being read
